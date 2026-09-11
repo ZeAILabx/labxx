@@ -44,22 +44,22 @@ export const AssessmentResult = ({ result }) => {
           <ResultTile
             icon={<Compass color="var(--accent-cyan)" />}
             title="Domain"
-            value={result?.domain || 'Healthcare & MedTech'}
+            value={result?.domain || 'Not assigned'}
           />
           <ResultTile
             icon={<Shield color="var(--accent-purple)" />}
             title="Stage"
-            value={result?.stage || 'Discover'}
+            value={result?.stage || 'Not assigned'}
           />
           <ResultTile
             icon={<Award color="var(--accent-amber)" />}
             title="Starting Level"
-            value={`Level ${result?.level || 1}`}
+            value={result?.level ? `Level ${result.level}` : 'Not assigned'}
           />
           <ResultTile
             icon={<Users color="var(--accent-green)" />}
             title="Assigned Guild"
-            value={result?.guild || 'Healthcare & MedTech Guild'}
+            value={result?.guild || 'Not assigned'}
           />
         </div>
 

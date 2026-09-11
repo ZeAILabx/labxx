@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useState, useEffect } from 'react';
 import { api } from '../services/api';
 import { Navbar } from '../components/common/Navbar';
-import { ShieldCheck, CheckCircle2, XCircle, Clock, ExternalLink, FileText } from 'lucide-react';
+import { CheckCircle2, XCircle, Clock, ExternalLink } from 'lucide-react';
+import { useEscapeKey } from '../hooks/useEscapeKey';
 
 export const AdminVerificationPage = () => {
   const [statusTab, setStatusTab] = useState('under_review'); // 'under_review' | 'approved' | 'rejected'
@@ -11,11 +12,9 @@ export const AdminVerificationPage = () => {
   const [feedback, setFeedback] = useState('');
   const [processing, setProcessing] = useState(false);
 
-  useEffect(() => {
-    fetchQueue();
-  }, [statusTab]);
+  useEscapeKey(Boolean(selectedSub), () => setSelectedSub(null));
 
-  const fetchQueue = async () => {
+  const fetchQueue = useCallback(async () => {
     setLoading(true);
     try {
       const res = await api.getVerificationQueue({ status: statusTab });
@@ -25,7 +24,11 @@ export const AdminVerificationPage = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, [statusTab]);
+
+  useEffect(() => {
+    fetchQueue();
+  }, [fetchQueue]);
 
   const handleReview = async (action) => {
     if (action === 'reject' && !feedback.trim()) {
@@ -88,8 +91,6 @@ export const AdminVerificationPage = () => {
           {submissions.map((sub) => {
             const founder = sub.profiles || {};
             const quest = sub.quests || {};
-            const ms = quest.milestones || {};
-
             return (
               <div key={sub.id} className="glass-card" style={{ padding: '20px', display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                 <div>
@@ -125,9 +126,9 @@ export const AdminVerificationPage = () => {
 
       {/* INSPECTION MODAL */}
       {selectedSub && (
-        <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', backgroundColor: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
+        <div role="dialog" aria-modal="true" aria-label="Review submission" style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', backgroundColor: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
           <div className="glass-card" style={{ width: '100%', maxWidth: '640px', maxHeight: '85vh', overflowY: 'auto', padding: '32px', position: 'relative' }}>
-            <button onClick={() => setSelectedSub(null)} style={{ position: 'absolute', top: '20px', right: '20px', color: 'var(--text-muted)' }}>✕</button>
+            <button aria-label="Close submission review" onClick={() => setSelectedSub(null)} style={{ position: 'absolute', top: '20px', right: '20px', color: 'var(--text-muted)' }}>✕</button>
 
             <h2 style={{ fontSize: '1.4rem', fontWeight: '800', color: '#fff', marginBottom: '16px' }}>
               Review Work: {selectedSub.quests?.title}

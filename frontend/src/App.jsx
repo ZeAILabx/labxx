@@ -1,35 +1,44 @@
 import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
-import { AuthProvider, useAuth } from './contexts/AuthContext';
+import { AuthProvider } from './contexts/AuthContext';
+import { useAuth } from './contexts/useAuth';
 import { Sidebar } from './components/common/Sidebar';
+import { ErrorBoundary } from './components/common/ErrorBoundary';
+import { CipherScreen } from './components/common/CipherScreen';
 
-// Auth Pages
-import { Login } from './components/auth/Login';
-import { Register } from './components/auth/Register';
+import './pages/FounderWorlds.css';
 
-// Assessment Flow
-import { AssessmentWizard } from './components/assessment/AssessmentWizard';
-import { AssessmentResult } from './components/assessment/AssessmentResult';
+const lazyNamed = (loader, exportName) => React.lazy(() =>
+  loader().then((module) => ({ default: module[exportName] }))
+);
 
-// Founder Pages
-import { DashboardPage } from './pages/DashboardPage';
-import { RoadmapPage } from './pages/RoadmapPage';
-import { MilestoneQuestPage } from './pages/MilestoneQuestPage';
-import { LeaderboardPage } from './pages/LeaderboardPage';
-import { GuildPage } from './pages/GuildPage';
-import { SocialPage } from './pages/SocialPage';
-import { EventsPage } from './pages/EventsPage';
-import { AchievementsPage } from './pages/AchievementsPage';
-import { NotificationsPage } from './pages/NotificationsPage';
-import { ProfilePage } from './pages/ProfilePage';
+const Login = lazyNamed(() => import('./components/auth/Login'), 'Login');
+const Register = lazyNamed(() => import('./components/auth/Register'), 'Register');
+const IntroVideo = lazyNamed(() => import('./components/auth/IntroVideo'), 'IntroVideo');
+const AssessmentWizard = lazyNamed(() => import('./components/assessment/AssessmentWizard'), 'AssessmentWizard');
+const AssessmentResult = lazyNamed(() => import('./components/assessment/AssessmentResult'), 'AssessmentResult');
+const DashboardPage = lazyNamed(() => import('./pages/DashboardPage'), 'DashboardPage');
+const RoadmapPage = lazyNamed(() => import('./pages/RoadmapPage'), 'RoadmapPage');
+const MilestoneQuestPage = lazyNamed(() => import('./pages/MilestoneQuestPage'), 'MilestoneQuestPage');
+const LeaderboardPage = lazyNamed(() => import('./pages/LeaderboardPage'), 'LeaderboardPage');
+const GuildPage = lazyNamed(() => import('./pages/GuildPage'), 'GuildPage');
+const SocialPage = lazyNamed(() => import('./pages/SocialPage'), 'SocialPage');
+const EventsPage = lazyNamed(() => import('./pages/EventsPage'), 'EventsPage');
+const AchievementsPage = lazyNamed(() => import('./pages/AchievementsPage'), 'AchievementsPage');
+const NotificationsPage = lazyNamed(() => import('./pages/NotificationsPage'), 'NotificationsPage');
+const ProfilePage = lazyNamed(() => import('./pages/ProfilePage'), 'ProfilePage');
+const AdminDashboardPage = lazyNamed(() => import('./pages/AdminDashboardPage'), 'AdminDashboardPage');
+const AdminVerificationPage = lazyNamed(() => import('./pages/AdminVerificationPage'), 'AdminVerificationPage');
+const AdminQuestsPage = lazyNamed(() => import('./pages/AdminQuestsPage'), 'AdminQuestsPage');
+const AdminRoadmapPage = lazyNamed(() => import('./pages/AdminRoadmapPage'), 'AdminRoadmapPage');
+const AdminFoundersPage = lazyNamed(() => import('./pages/AdminFoundersPage'), 'AdminFoundersPage');
+const AdminEventsPage = lazyNamed(() => import('./pages/AdminEventsPage'), 'AdminEventsPage');
 
-// Admin Pages
-import { AdminDashboardPage } from './pages/AdminDashboardPage';
-import { AdminVerificationPage } from './pages/AdminVerificationPage';
-import { AdminQuestsPage } from './pages/AdminQuestsPage';
-import { AdminRoadmapPage } from './pages/AdminRoadmapPage';
-import { AdminFoundersPage } from './pages/AdminFoundersPage';
-import { AdminEventsPage } from './pages/AdminEventsPage';
+const RouteFallback = () => (
+  <div className="route-fallback" role="status" aria-label="Loading page">
+    <div className="spinner" />
+  </div>
+);
 
 // Protected Route Wrapper
 const ProtectedRoute = ({ children, roleRequired }) => {
@@ -64,8 +73,16 @@ const ProtectedRoute = ({ children, roleRequired }) => {
 // Layout Shell with Sidebar
 const AppShell = ({ children }) => {
   const { isAuthenticated } = useAuth();
+  const location = useLocation();
 
-  if (!isAuthenticated) return children;
+  const isFullscreenRoute =
+    location.pathname === '/' ||
+    location.pathname === '/login' ||
+    location.pathname === '/register' ||
+    location.pathname === '/assessment' ||
+    location.pathname.startsWith('/assessment');
+
+  if (!isAuthenticated || isFullscreenRoute) return children;
 
   return (
     <div className="app-layout">
@@ -75,15 +92,24 @@ const AppShell = ({ children }) => {
   );
 };
 
+const DefaultRedirect = () => {
+  const { isAuthenticated, isAdmin } = useAuth();
+  if (!isAuthenticated) return <Navigate to="/register" replace />;
+  return <Navigate to={isAdmin ? '/admin' : '/dashboard'} replace />;
+};
+
 export function App() {
   const [assessmentResult, setAssessmentResult] = React.useState(null);
 
   return (
     <AuthProvider>
       <Router>
-        <AppShell>
-          <Routes>
+        <ErrorBoundary>
+          <AppShell>
+            <React.Suspense fallback={<RouteFallback />}>
+              <CipherScreen><Routes>
             {/* Public Auth Routes */}
+            <Route path="/" element={<IntroVideo />} />
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
 
@@ -243,9 +269,11 @@ export function App() {
             />
 
             {/* Default Catch-all Redirect */}
-            <Route path="*" element={<Navigate to="/login" replace />} />
-          </Routes>
-        </AppShell>
+            <Route path="*" element={<DefaultRedirect />} />
+              </Routes></CipherScreen>
+            </React.Suspense>
+          </AppShell>
+        </ErrorBoundary>
       </Router>
     </AuthProvider>
   );

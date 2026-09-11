@@ -1,17 +1,13 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useState, useEffect } from 'react';
 import { api } from '../services/api';
 import { Navbar } from '../components/common/Navbar';
-import { Map, Layers, Compass } from 'lucide-react';
+import { Compass } from 'lucide-react';
 
 export const AdminRoadmapPage = () => {
   const [roadmap, setRoadmap] = useState(null);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchRoadmap();
-  }, []);
-
-  const fetchRoadmap = async () => {
+  const fetchRoadmap = useCallback(async () => {
     setLoading(true);
     try {
       const res = await api.getRoadmap();
@@ -21,7 +17,11 @@ export const AdminRoadmapPage = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchRoadmap();
+  }, [fetchRoadmap]);
 
   if (loading) {
     return (

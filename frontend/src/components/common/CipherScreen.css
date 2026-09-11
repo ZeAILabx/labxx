@@ -1,0 +1,23 @@
+.cipher-screen { display: contents; }
+.screen-decoding { position: relative; }
+.screen-decoding::after {
+  content: attr(data-cipher);
+  position: absolute;
+  inset: 0;
+  display: flex;
+  align-items: center;
+  padding: inherit;
+  border-radius: inherit;
+  background: #0b1220;
+  color: #a5f3fc;
+  font-family: 'Consolas', monospace;
+  font-size: inherit;
+  font-weight: inherit;
+  line-height: inherit;
+  overflow: hidden;
+  overflow-wrap: anywhere;
+  pointer-events: none;
+  text-shadow: 0 0 8px #22d3ee33;
+}
+button.screen-decoding::after { justify-content: center; }
+@media (prefers-reduced-motion: reduce) { .screen-decoding::after { display: none; } }

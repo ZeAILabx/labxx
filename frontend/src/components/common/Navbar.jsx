@@ -1,74 +1,67 @@
 import React from 'react';
-import { useAuth } from '../../contexts/AuthContext';
-import { Bell, Coins, Shield } from 'lucide-react';
+import './labxshell.css';
+import { useAuth } from '../../contexts/useAuth';
+import { Bell, Shield } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
+import { FloatingXp } from './FloatingXp';
 
 export const Navbar = ({ title }) => {
   const { user, isFounder, isAdmin } = useAuth();
   const navigate = useNavigate();
 
   return (
-    <header
-      style={{
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'space-between',
-        marginBottom: '28px',
-        paddingBottom: '16px',
-        borderBottom: '1px solid var(--border-color)',
-      }}
-    >
-      <div>
-        <h1 style={{ fontSize: '1.6rem', fontWeight: '800', color: '#fff', letterSpacing: '-0.02em' }}>{title}</h1>
+    <header className="labx-navbar">
+
+      {/* TITLE */}
+      <div className="labx-navbar-title">
+        <div className="labx-title-line" />
+
+        <div>
+          <h1>{title}</h1>
+
+          {isFounder && (
+            <span className="labx-subtitle">
+              FOUNDER COMMAND CENTER
+            </span>
+          )}
+
+          {isAdmin && (
+            <span className="labx-subtitle">
+              ADMIN COMMAND CENTER
+            </span>
+          )}
+        </div>
       </div>
 
-      <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
+      {/* ACTIONS */}
+      <div className="labx-navbar-actions">
+
+        {/* LABX XP */}
         {isFounder && (
-          <div
-            style={{
-              display: 'flex',
-              alignItems: 'center',
-              gap: '6px',
-              backgroundColor: 'rgba(245, 158, 11, 0.12)',
-              border: '1px solid rgba(245, 158, 11, 0.3)',
-              padding: '6px 14px',
-              borderRadius: 'var(--radius-full)',
-              color: 'var(--accent-amber)',
-              fontWeight: '700',
-              fontSize: '0.9rem',
-            }}
-          >
-            <Coins size={16} />
-            <span>{user?.total_points || 0} LABX</span>
-          </div>
+          <FloatingXp points={user?.total_points || 0} />
         )}
 
+        {/* ADMIN */}
         {isAdmin && (
-          <span className="badge badge-amber" style={{ padding: '6px 12px' }}>
-            <Shield size={14} /> Admin Privileges
+          <span className="badge badge-amber labx-admin-badge">
+            <Shield size={14} />
+            Admin Privileges
           </span>
         )}
 
+        {/* NOTIFICATIONS */}
         {isFounder && (
           <button
+            className="labx-notification-btn"
             onClick={() => navigate('/notifications')}
-            style={{
-              width: '40px',
-              height: '40px',
-              borderRadius: '50%',
-              backgroundColor: 'var(--bg-card)',
-              border: '1px solid var(--border-color)',
-              color: 'var(--text-muted)',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'center',
-              transition: 'all 0.2s',
-            }}
+            aria-label="Notifications"
           >
-            <Bell size={18} />
+            <Bell size={18} color="var(--accent-cyan)" />
           </button>
         )}
+
       </div>
+
     </header>
   );
 };

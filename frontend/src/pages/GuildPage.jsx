@@ -1,278 +1,466 @@
-import React, { useState, useEffect, useRef } from 'react';
-import { api } from '../services/api';
-import { supabase } from '../services/supabase';
-import { useAuth } from '../contexts/AuthContext';
+import React, { useEffect, useState, useRef } from 'react';
+import { useNavigate } from 'react-router-dom';
+import {
+  Shield,
+  Users,
+  Send,
+  Sparkles,
+  Crown,
+  Layers3,
+  Target,
+  Flag,
+  Radio,
+  Smile,
+  Zap,
+  Flame,
+  Lightbulb,
+  Rocket,
+  ThumbsUp,
+  MessageSquare,
+  Clock,
+  ChevronRight,
+} from 'lucide-react';
 import { Navbar } from '../components/common/Navbar';
-import { Users, Send, MessageSquare, Shield, Award } from 'lucide-react';
+import { useAuth } from '../contexts/useAuth';
+import { api } from '../services/api';
+import { soundManager } from '../components/auth/gamified/soundEffects';
+import './GuildHub.css';
+
+const LEVEL_TITLES = ['Pathfinder', 'Learner', 'Builder', 'Collaborator', 'Vanguard'];
+
+const QUICK_EMOJIS = ['🚀', '🔥', '💡', '⚡', '👏', '🤝', '🎯', '💯'];
 
 export const GuildPage = () => {
+  const navigate = useNavigate();
   const { user } = useAuth();
-  const [activeTab, setActiveTab] = useState('chat'); // 'chat' | 'members'
+
+  const [assessment, setAssessment] = useState(null);
   const [guildInfo, setGuildInfo] = useState(null);
-  const [messages, setMessages] = useState([]);
   const [members, setMembers] = useState([]);
-  const [newMessage, setNewMessage] = useState('');
-  const [loading, setLoading] = useState(true);
+  const [progress, setProgress] = useState(null);
+  const [messages, setMessages] = useState([]);
+  const [messageText, setMessageText] = useState('');
   const [sending, setSending] = useState(false);
-  const [error, setError] = useState('');
-  const chatBottomRef = useRef(null);
+  const [loading, setLoading] = useState(true);
+
+  const followMessagesRef = useRef(true);
+  const chatContainerRef = useRef(null);
 
   useEffect(() => {
-    fetchGuildData();
+    loadGuildData();
+
+    // Periodic polling to receive live community messages from peers
+    const interval = setInterval(() => {
+      fetchMessagesSilently();
+    }, 4000);
+
+    return () => clearInterval(interval);
   }, []);
 
   useEffect(() => {
-    if (!guildInfo?.guild?.id) return;
-
-    // Supabase Realtime Subscription for Guild Chat
-    const channel = supabase
-      .channel(`guild_${guildInfo.guild.id}`)
-      .on(
-        'postgres_changes',
-        {
-          event: 'INSERT',
-          schema: 'public',
-          table: 'guild_messages',
-          filter: `guild_id=eq.${guildInfo.guild.id}`,
-        },
-        (payload) => {
-          fetchMessages();
-        }
-      )
-      .subscribe();
-
-    return () => {
-      supabase.removeChannel(channel);
-    };
-  }, [guildInfo]);
-
-  useEffect(() => {
-    if (activeTab === 'chat') {
-      chatBottomRef.current?.scrollIntoView({ behavior: 'smooth' });
+    const container = chatContainerRef.current;
+    if (container && followMessagesRef.current) {
+      container.scrollTop = container.scrollHeight;
     }
-  }, [messages, activeTab]);
+  }, [messages, loading]);
 
-  const fetchGuildData = async () => {
+  const loadGuildData = async () => {
     setLoading(true);
     try {
-      const gRes = await api.getMyGuild();
-      setGuildInfo(gRes.data);
+      const [assessmentRes, guildRes, membersRes, progressRes, messagesRes] = await Promise.allSettled([
+        api.getAssessmentStatus(),
+        api.getMyGuild(),
+        api.getGuildMembers({ per_page: 15 }),
+        api.getProgress(),
+        api.getGuildMessages({ limit: 50 }),
+      ]);
 
-      await fetchMessages();
-      await fetchMembers();
+      if (assessmentRes.status === 'fulfilled') setAssessment(assessmentRes.value.data?.assessment);
+      if (guildRes.status === 'fulfilled') setGuildInfo(guildRes.value.data);
+      if (membersRes.status === 'fulfilled') setMembers(membersRes.value.data || []);
+      if (progressRes.status === 'fulfilled') setProgress(progressRes.value.data);
+      if (messagesRes.status === 'fulfilled') setMessages(messagesRes.value.data || []);
     } catch (err) {
-      setError(err.message || 'Failed to load guild');
+      console.error('Error loading guild data:', err);
     } finally {
       setLoading(false);
     }
   };
 
-  const fetchMessages = async () => {
+  const fetchMessagesSilently = async () => {
     try {
-      const mRes = await api.getGuildMessages({ limit: 50 });
-      setMessages(mRes.data || []);
+      const res = await api.getGuildMessages({ limit: 50 });
+      if (res.data) {
+        setMessages(previous => JSON.stringify(previous) === JSON.stringify(res.data) ? previous : res.data);
+      }
     } catch (err) {
-      console.error('Error loading messages:', err);
-    }
-  };
-
-  const fetchMembers = async () => {
-    try {
-      const memRes = await api.getGuildMembers();
-      setMembers(memRes.data || []);
-    } catch (err) {
-      console.error('Error loading members:', err);
+      // silent catch for background polling
     }
   };
 
   const handleSendMessage = async (e) => {
-    e.preventDefault();
-    if (!newMessage.trim() || sending) return;
+    if (e) e.preventDefault();
+    if (!messageText.trim() || sending) return;
 
+    const content = messageText.trim();
+    setMessageText('');
     setSending(true);
+
     try {
-      await api.sendGuildMessage({ content: newMessage });
-      setNewMessage('');
-      await fetchMessages();
+      soundManager.playWarpLaunch();
+      const res = await api.sendGuildMessage({ content });
+
+      if (res.data) {
+        followMessagesRef.current = true;
+        setMessages((prev) => [...prev, res.data]);
+      } else {
+        fetchMessagesSilently();
+      }
     } catch (err) {
-      alert(err.message || 'Failed to send message');
+      console.error('Failed to send guild message:', err);
     } finally {
       setSending(false);
     }
   };
 
+  const handleEmojiClick = (emoji) => {
+    soundManager.playHover();
+    setMessageText((prev) => prev + emoji);
+  };
+
   if (loading) {
     return (
-      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center', minHeight: '60vh' }}>
+      <div className="guild-hub guild-hub--loading">
         <div className="spinner" />
       </div>
     );
   }
 
-  if (error) {
-    return (
-      <div className="glass-card" style={{ padding: '32px', textAlign: 'center', color: 'var(--accent-red)' }}>
-        {error}
-      </div>
-    );
-  }
-
-  const { guild, member_count } = guildInfo || {};
+  const level = assessment?.calculated_level || progress?.current_level?.level_number || 1;
+  const guild = guildInfo?.guild;
+  const domain = guild?.domains?.name || assessment?.calculated_domain || user?.domains?.name || 'Technology';
+  const stage = assessment?.calculated_stage || progress?.current_stage?.name || 'Stage 1 Explorer';
+  const levelTitle = LEVEL_TITLES[Math.min(Math.max(level, 1), 5) - 1];
+  const milestone = progress?.current_milestone?.name || 'Founder Milestone';
+  const milestoneProgress = progress?.milestone_progress_percentage || 0;
+  const domainSlug = domain.toLowerCase().replace(/[^a-z0-9]+/g, '-');
 
   return (
-    <div>
-      <Navbar title={guild?.name || 'Domain Guild'} />
+    <div className="guild-hub">
+      <Navbar title={`${domain} Guild`} />
 
-      {/* Guild Banner */}
-      <div
-        className="glass-card"
-        style={{
-          padding: '24px',
-          marginBottom: '24px',
-          background: 'linear-gradient(135deg, rgba(6,182,212,0.15) 0%, rgba(168,85,247,0.1) 100%)',
-          display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'center',
-        }}
-      >
-        <div>
-          <span className="badge badge-cyan" style={{ marginBottom: '8px' }}>
-            <Shield size={12} /> {guild?.domains?.name} Domain Guild
-          </span>
-          <h2 style={{ fontSize: '1.5rem', fontWeight: '800', color: '#fff', marginBottom: '4px' }}>
-            {guild?.name}
-          </h2>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>{guild?.description}</p>
+      {/* =========================================================
+          HERO BANNER (Personalized for user's domain)
+      ========================================================= */}
+      <section className="guild-hero">
+        <div className="guild-hero__orb">
+          <Shield size={36} />
+          <span className="live-status-dot" title="Live Frequency" />
         </div>
 
-        <div style={{ display: 'flex', alignItems: 'center', gap: '8px', backgroundColor: 'rgba(255,255,255,0.05)', padding: '10px 18px', borderRadius: 'var(--radius-md)' }}>
-          <Users size={20} color="var(--accent-cyan)" />
-          <span style={{ fontSize: '1rem', fontWeight: '700', color: '#fff' }}>{member_count} Founders</span>
+        <div className="guild-hero__copy">
+          <div className="guild-hero__eyebrow">
+            <Radio size={14} className="live-radar-icon" />
+            <span>EXCLUSIVE DOMAIN GUILD COMMUNITY</span>
+          </div>
+
+          <h1>{guild?.name || `${domain} Guild Community`}</h1>
+          <p>
+            Private community lounge for <strong>{domain}</strong> founders. Connect with peers who share your market focus, exchange insights, and collaborate.
+          </p>
+
+          <div className="guild-hero__tags">
+            <span className="guild-tag tag-level">
+              <Crown size={14} /> Level {level} · {levelTitle}
+            </span>
+            <span className="guild-tag tag-stage">
+              <Layers3 size={14} /> {stage}
+            </span>
+            <span className="guild-tag tag-members">
+              <Users size={14} /> {guildInfo?.member_count || members.length || 1} Domain Founders
+            </span>
+          </div>
         </div>
-      </div>
 
-      {/* Tab Controls */}
-      <div style={{ display: 'flex', gap: '12px', marginBottom: '20px' }}>
-        <button
-          className={`btn ${activeTab === 'chat' ? 'btn-primary' : 'btn-secondary'}`}
-          onClick={() => setActiveTab('chat')}
-        >
-          <MessageSquare size={18} /> Guild Chat
-        </button>
-        <button
-          className={`btn ${activeTab === 'members' ? 'btn-primary' : 'btn-secondary'}`}
-          onClick={() => setActiveTab('members')}
-        >
-          <Users size={18} /> Member Directory ({member_count})
-        </button>
-      </div>
+        <div className="guild-hero__level">
+          <small>DOMAIN FREQUENCY</small>
+          <strong>#{domainSlug}</strong>
+          <span>ONLINE COMMUNITY</span>
+        </div>
+      </section>
 
-      {/* CHAT TAB */}
-      {activeTab === 'chat' && (
-        <div className="glass-card" style={{ display: 'flex', flexDirection: 'column', height: '550px' }}>
-          {/* Chat Message Scroll Box */}
-          <div style={{ flex: 1, padding: '20px', overflowY: 'auto', display: 'flex', flexDirection: 'column', gap: '16px' }}>
+      {/* =========================================================
+          COMMUNITY GRID: LEFT (ROSTER & STATS) + RIGHT (CHAT)
+      ========================================================= */}
+      <div className="guild-dashboard-grid">
+        {/* ================= LEFT SIDEBAR ================= */}
+        <aside className="guild-side-panel">
+          {/* Active Domain Founders Roster */}
+          <article className="guild-widget guild-widget--members">
+            <div className="guild-widget__title">
+              <Users size={16} />
+              <span>Domain Founders</span>
+              <em>{guildInfo?.member_count || members.length} Active</em>
+            </div>
+
+            <p className="guild-widget-sub">
+              Founders aligned in the <strong>{domain}</strong> sector.
+            </p>
+
+            <div className="guild-party">
+              {members.length ? (
+                members.map((member, index) => {
+                  const memberProfile = member.profiles || member || {};
+                  const isCurrentUser = memberProfile.id === user?.id;
+                  const name = memberProfile.full_name || memberProfile.username || 'Founder';
+                  const initials = name
+                    .split(' ')
+                    .map((part) => part[0])
+                    .join('')
+                    .slice(0, 2)
+                    .toUpperCase();
+
+                  return (
+                    <div
+                      className={`guild-member ${isCurrentUser ? 'is-self' : ''}`}
+                      key={memberProfile.id || index}
+                      onClick={() => {
+                        if (memberProfile.id) {
+                          soundManager.playHover();
+                          navigate(`/profile/${memberProfile.id}`);
+                        }
+                      }}
+                      title="View founder profile"
+                    >
+                      <div className="guild-member__avatar">
+                        {memberProfile.avatar_url ? (
+                          <img src={memberProfile.avatar_url} alt={name} />
+                        ) : (
+                          initials
+                        )}
+                        <span className="member-online-dot" />
+                      </div>
+
+                      <div className="guild-member__info">
+                        <div className="guild-member__name-row">
+                          <strong>{name}</strong>
+                          {isCurrentUser && <span className="you-chip">YOU</span>}
+                        </div>
+                        <span>@{memberProfile.username || 'founder'}</span>
+                      </div>
+
+                      <ChevronRight size={14} className="member-arrow" />
+                    </div>
+                  );
+                })
+              ) : (
+                <div className="guild-party__empty">
+                  <Users size={24} />
+                  <p>You are the first pioneer in this domain guild!</p>
+                </div>
+              )}
+            </div>
+          </article>
+
+          {/* Current Milestone Objective */}
+          <article className="guild-widget guild-widget--mission">
+            <div className="guild-widget__title">
+              <Target size={16} />
+              <span>Current Objective</span>
+            </div>
+            <h3>{milestone}</h3>
+            <p>Your team's active roadmap milestone from LabX.</p>
+            <div className="guild-progress">
+              <div style={{ width: `${milestoneProgress}%` }} />
+            </div>
+            <div className="guild-progress__label">
+              <span>Milestone Progress</span>
+              <strong>{milestoneProgress}%</strong>
+            </div>
+          </article>
+
+          {/* Domain Identity */}
+          <article className="guild-widget guild-widget--identity">
+            <div className="guild-widget__title">
+              <Flag size={16} />
+              <span>Domain Identity</span>
+            </div>
+            <dl>
+              <div>
+                <dt>Domain Realm</dt>
+                <dd className="accent-cyan">{domain}</dd>
+              </div>
+              <div>
+                <dt>Current Stage</dt>
+                <dd className="accent-purple">{stage}</dd>
+              </div>
+              <div>
+                <dt>Founder Class</dt>
+                <dd className="accent-amber">{levelTitle}</dd>
+              </div>
+            </dl>
+          </article>
+        </aside>
+
+        {/* ================= RIGHT COMMUNITY CHAT ROOM ================= */}
+        <main className="guild-chat-container">
+          {/* Chat Room Header */}
+          <div className="guild-chat-header">
+            <div className="chat-header-left">
+              <div className="chat-channel-badge">
+                <Radio size={14} className="chat-radio-pulse" />
+                <span>#{domainSlug}-founders</span>
+              </div>
+              <span className="chat-channel-desc">
+                Live frequency channel for {domain} founders
+              </span>
+            </div>
+
+            <div className="chat-header-right">
+              <span className="chat-live-pulse">
+                <span className="pulse-dot" />
+                COMMUNITY ONLINE
+              </span>
+            </div>
+          </div>
+
+          {/* Messages Stream Feed */}
+          <div className="guild-messages-feed" ref={chatContainerRef} onScroll={(event) => {
+            const container = event.currentTarget;
+            followMessagesRef.current = container.scrollHeight - container.scrollTop - container.clientHeight < 48;
+          }}>
             {messages.length === 0 ? (
-              <div style={{ margin: 'auto', color: 'var(--text-muted)' }}>
-                No messages yet. Be the first founder to say hello!
+              <div className="chat-welcome-state">
+                <div className="welcome-icon-wrap">
+                  <MessageSquare size={36} />
+                </div>
+                <h3>Welcome to the #{domainSlug} Lounge!</h3>
+                <p>
+                  This is the dedicated community channel for founders in the{' '}
+                  <strong>{domain}</strong> domain.
+                </p>
+                <span className="welcome-prompt">
+                  Say hello to your fellow {domain} founders and start the conversation below! 👇
+                </span>
               </div>
             ) : (
-              messages.map((msg) => {
-                const isMe = msg.user_id === user?.id;
-                const authorName = msg.profiles?.full_name || 'Founder';
+              messages.map((msg, index) => {
+                const author = msg.profiles || {};
+                const isSelf = author.id === user?.id || msg.user_id === user?.id;
+                const authorName = author.full_name || (isSelf ? user?.full_name : 'Founder');
+                const initials = authorName
+                  .split(' ')
+                  .map((n) => n[0])
+                  .join('')
+                  .slice(0, 2)
+                  .toUpperCase();
+
+                const timeStr = msg.created_at
+                  ? new Date(msg.created_at).toLocaleTimeString([], {
+                      hour: '2-digit',
+                      minute: '2-digit',
+                    })
+                  : '';
 
                 return (
                   <div
-                    key={msg.id}
-                    style={{
-                      alignSelf: isMe ? 'flex-end' : 'flex-start',
-                      maxWidth: '70%',
-                      display: 'flex',
-                      flexDirection: 'column',
-                      alignItems: isMe ? 'flex-end' : 'flex-start',
-                    }}
+                    key={msg.id || index}
+                    className={`guild-chat-message ${isSelf ? 'message--self' : 'message--peer'}`}
                   >
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-dim)', marginBottom: '4px' }}>
-                      {authorName} • {new Date(msg.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
+                    {!isSelf && (
+                      <div
+                        className="message-avatar"
+                        onClick={() => author.id && navigate(`/profile/${author.id}`)}
+                        title={`View ${authorName}'s profile`}
+                      >
+                        {author.avatar_url ? (
+                          <img src={author.avatar_url} alt={authorName} />
+                        ) : (
+                          initials
+                        )}
+                      </div>
+                    )}
+
+                    <div className="message-content-wrap">
+                      <div className="message-header-line">
+                        <strong
+                          className="author-name"
+                          onClick={() => !isSelf && author.id && navigate(`/profile/${author.id}`)}
+                        >
+                          {authorName}
+                        </strong>
+
+                        {isSelf ? (
+                          <span className="message-you-badge">YOU</span>
+                        ) : (
+                          <span className="message-domain-badge">{domain}</span>
+                        )}
+
+                        <span className="message-time">
+                          <Clock size={11} /> {timeStr}
+                        </span>
+                      </div>
+
+                      <div className="message-bubble">
+                        <p>{msg.content}</p>
+                      </div>
                     </div>
 
-                    <div
-                      style={{
-                        padding: '12px 16px',
-                        borderRadius: 'var(--radius-md)',
-                        backgroundColor: isMe ? 'var(--primary)' : 'rgba(255,255,255,0.06)',
-                        color: '#fff',
-                        fontSize: '0.95rem',
-                        lineHeight: '1.4',
-                      }}
-                    >
-                      {msg.content}
-                    </div>
+                    {isSelf && (
+                      <div className="message-avatar message-avatar--self">
+                        {user?.avatar_url ? (
+                          <img src={user.avatar_url} alt={authorName} />
+                        ) : (
+                          initials
+                        )}
+                      </div>
+                    )}
                   </div>
                 );
               })
             )}
-            <div ref={chatBottomRef} />
           </div>
 
-          {/* Chat Input Bar */}
-          <form
-            onSubmit={handleSendMessage}
-            style={{
-              padding: '16px',
-              borderTop: '1px solid var(--border-color)',
-              display: 'flex',
-              gap: '12px',
-            }}
-          >
+          {/* Quick Reaction Emojis Row */}
+          <div className="guild-chat-reactions-bar">
+            <span className="reactions-label">Quick Transmit:</span>
+            <div className="reactions-list">
+              {QUICK_EMOJIS.map((emoji) => (
+                <button
+                  type="button"
+                  key={emoji}
+                  className="reaction-emoji-btn"
+                  onClick={() => handleEmojiClick(emoji)}
+                >
+                  {emoji}
+                </button>
+              ))}
+            </div>
+          </div>
+
+          {/* Message Input Form */}
+          <form className="guild-chat-input-bar" onSubmit={handleSendMessage}>
             <input
               type="text"
-              className="form-input"
-              value={newMessage}
-              onChange={(e) => setNewMessage(e.target.value)}
-              placeholder="Type a message to your domain guild..."
-              style={{ borderRadius: 'var(--radius-full)' }}
+              className="chat-text-input"
+              placeholder={`Message #${domainSlug}-founders...`}
+              value={messageText}
+              onChange={(e) => setMessageText(e.target.value)}
+              disabled={sending}
             />
-            <button type="submit" className="btn btn-primary" style={{ borderRadius: 'var(--radius-full)', padding: '12px 20px' }} disabled={sending}>
-              <Send size={18} />
+
+            <button
+              type="submit"
+              className="btn-chat-send"
+              disabled={!messageText.trim() || sending}
+              onMouseEnter={soundManager.playHover}
+            >
+              <span>{sending ? 'Sending...' : 'Send'}</span>
+              <Send size={16} />
             </button>
           </form>
-        </div>
-      )}
-
-      {/* MEMBERS TAB */}
-      {activeTab === 'members' && (
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: '16px' }}>
-          {members.map((m) => {
-            const p = m.profiles || {};
-            return (
-              <div key={m.joined_at + p.id} className="glass-card" style={{ padding: '20px', display: 'flex', alignItems: 'center', gap: '14px' }}>
-                <div
-                  style={{
-                    width: '44px',
-                    height: '44px',
-                    borderRadius: '50%',
-                    backgroundColor: 'var(--primary-light)',
-                    color: 'var(--primary)',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    fontWeight: '700',
-                  }}
-                >
-                  {p.full_name?.charAt(0) || 'F'}
-                </div>
-                <div>
-                  <div style={{ fontWeight: '700', color: '#fff', fontSize: '1rem' }}>{p.full_name || 'Founder'}</div>
-                  <div style={{ fontSize: '0.8rem', color: 'var(--text-muted)', display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <Award size={12} color="var(--accent-amber)" /> {p.total_points || 0} LABX Points
-                  </div>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      )}
+        </main>
+      </div>
     </div>
   );
 };

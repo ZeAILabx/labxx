@@ -1,16 +1,71 @@
 import React, { useState } from 'react';
-import { useAuth } from '../../contexts/AuthContext';
-import { useNavigate, Link } from 'react-router-dom';
-import { UserPlus, ArrowRight } from 'lucide-react';
+import { useAuth } from '../../contexts/useAuth';
+import { useNavigate } from 'react-router-dom';
+import {
+  Eye,
+  EyeOff,
+  ArrowRight,
+  Shield,
+  Volume2,
+  VolumeX,
+  Sparkles,
+  AlertCircle
+} from 'lucide-react';
+import { ParticleNetwork } from './gamified/ParticleNetwork';
+import { HologramX } from './gamified/HologramX';
+import { soundManager } from './gamified/soundEffects';
+import './Register.css';
 
 export const Register = () => {
+  const [fullName, setFullName] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
-  const [fullName, setFullName] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
+
+  const [soundActive, setSoundActive] = useState(true);
   const [error, setError] = useState('');
   const [loading, setLoading] = useState(false);
+  const [launchingWarp, setLaunchingWarp] = useState(false);
+  const [isSwitching, setIsSwitching] = useState(false);
+
   const { register } = useAuth();
   const navigate = useNavigate();
+
+  const handleSwitchToLogin = (e) => {
+    if (e) e.preventDefault();
+    if (isSwitching) return;
+    soundManager.playTransition();
+    setIsSwitching(true);
+    setTimeout(() => {
+      navigate('/login');
+    }, 400);
+  };
+
+  // Password strength matrix
+  const getPasswordStrength = () => {
+    if (!password) return 0;
+    let score = 0;
+    if (password.length >= 6) score++;
+    if (password.length >= 10) score++;
+    if (/[A-Z]/.test(password) && /[0-9]/.test(password)) score++;
+    if (/[^A-Za-z0-9]/.test(password)) score++;
+    return score;
+  };
+
+  const passwordScore = getPasswordStrength();
+  const passwordLabels = [
+    'ENCRYPTION REQUIRED',
+    'VULNERABLE PROTOCOL',
+    'HARDENED SHIELD',
+    'FORTIFIED VAULT',
+    'INDESTRUCTIBLE CYPHER'
+  ];
+
+  const toggleSound = () => {
+    const newState = soundManager.toggle();
+    setSoundActive(newState);
+    if (newState) soundManager.playHover();
+  };
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -18,92 +73,238 @@ export const Register = () => {
     setLoading(true);
 
     try {
+      soundManager.playWarpLaunch();
+      setLaunchingWarp(true);
+
       const result = await register(email, password, fullName);
-      // If access_token is null, email confirmation is still pending
-      if (!result.access_token) {
-        setError('Registration successful! Please check your email to confirm your account, then sign in.');
+
+      // If confirmation email is required
+      if (!result?.access_token) {
+        setError('Registration successful! Confirmation beacon dispatched. Check your email to sign in.');
         setLoading(false);
+        setLaunchingWarp(false);
         return;
       }
-      navigate('/assessment');
+
+      // Short delay for warp animation
+      setTimeout(() => {
+        navigate('/assessment');
+      }, 700);
     } catch (err) {
-      setError(err.message || 'Registration failed.');
-    } finally {
+      setError(err.message || 'Founder registration encountered an issue.');
       setLoading(false);
+      setLaunchingWarp(false);
     }
   };
 
   return (
-    <div style={{ minHeight: '100vh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: '20px' }}>
-      <div className="glass-card" style={{ width: '100%', maxWidth: '420px', padding: '36px' }}>
-        <div style={{ textAlign: 'center', marginBottom: '28px' }}>
-          <h1 style={{ fontSize: '1.8rem', fontWeight: '800', marginBottom: '6px' }}>
-            Join <span style={{ color: 'var(--accent-cyan)' }}>LABX</span>
-          </h1>
-          <p style={{ color: 'var(--text-muted)', fontSize: '0.9rem' }}>
-            Begin your founder development roadmap
-          </p>
+    <div className="gamified-auth-container">
+      {/* Interactive Background Particle Constellation */}
+      <ParticleNetwork />
+
+      {/* Top Gamification HUD */}
+      <div className="auth-top-hud">
+        <button
+          type="button"
+          className="hud-sound-toggle"
+          onClick={toggleSound}
+          onMouseEnter={soundManager.playHover}
+          title="Toggle SFX"
+        >
+          {soundActive ? <Volume2 size={16} color="#38bdf8" /> : <VolumeX size={16} color="#64748b" />}
+          <span>SFX: {soundActive ? 'ONLINE' : 'MUTED'}</span>
+        </button>
+
+      </div>
+
+      {/* Master Dual Card Container */}
+      <div className={`gamified-card-shell ${isSwitching ? 'is-switching' : ''}`}>
+        {/* Holographic Laser Scanline Sweep */}
+        <div className="card-laser-scanner" />
+
+        {/* ================= LEFT SHOWCASE PANEL ================= */}
+        <div className="showcase-panel">
+          <div className="showcase-header">
+            <div className="brand-logo-wrap">
+              <span className="brand-logo-text">
+                Lab<span className="brand-x-neon">X</span>
+              </span>
+              <span className="brand-sub-badge">by ZeAI</span>
+            </div>
+
+            <p className="showcase-subhead">Build Tomorrow.</p>
+            <h1 className="showcase-title">Join the Founder Movement</h1>
+            <p className="showcase-desc">
+              Create your account and begin your founder progression journey.
+            </p>
+          </div>
+
+          {/* Centerpiece: Interactive 3D Holographic 'X' */}
+          <HologramX />
+
+          {/* Bottom Ecosystem Hologram Pill */}
+          <div className="showcase-bottom-pill">
+            <div className="pill-left">
+              <div className="pill-shield-icon">
+                <Shield size={16} />
+              </div>
+              <span className="pill-text">One Ecosystem. Infinite Opportunities.</span>
+            </div>
+          </div>
         </div>
 
-        {error && (
-          <div style={{ padding: '10px 14px', backgroundColor: 'rgba(239, 68, 68, 0.15)', color: 'var(--accent-red)', borderRadius: '8px', marginBottom: '20px', fontSize: '0.85rem' }}>
-            {error}
-          </div>
-        )}
-
-        <form onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label className="form-label">Full Name</label>
-            <input
-              type="text"
-              className="form-input"
-              required
-              value={fullName}
-              onChange={(e) => setFullName(e.target.value)}
-              placeholder="Arjun Mehta"
-            />
-          </div>
-
-          <div className="form-group">
-            <label className="form-label">Email Address</label>
-            <input
-              type="email"
-              className="form-input"
-              required
-              value={email}
-              onChange={(e) => setEmail(e.target.value)}
-              placeholder="founder@venture.com"
-            />
+        {/* ================= RIGHT REGISTRATION FORM ================= */}
+        <div className="form-panel">
+          {/* Top Mode Switcher Tabs */}
+          <div className="auth-mode-switch-tabs">
+            <button
+              type="button"
+              className="mode-tab-btn active"
+              onClick={() => soundManager.playHover()}
+            >
+              <Sparkles size={13} />
+              <span>Register</span>
+            </button>
+            <button
+              type="button"
+              className="mode-tab-btn"
+              onClick={handleSwitchToLogin}
+              onMouseEnter={soundManager.playHover}
+            >
+              <span>Sign In</span>
+            </button>
           </div>
 
-          <div className="form-group">
-            <label className="form-label">Password</label>
-            <input
-              type="password"
-              className="form-input"
-              required
-              minLength={6}
-              value={password}
-              onChange={(e) => setPassword(e.target.value)}
-              placeholder="Minimum 6 characters"
-            />
+          <div className="form-header">
+            <h2 className="form-title">Create Your LabX Account</h2>
+            <p className="form-subtitle">Start building your future today.</p>
           </div>
 
-          <button
-            type="submit"
-            className="btn btn-primary"
-            style={{ width: '100%', marginTop: '12px', padding: '12px' }}
-            disabled={loading}
-          >
-            {loading ? 'Creating Founder Account...' : 'Register Founder'} <ArrowRight size={18} />
-          </button>
-        </form>
+          {/* Anomaly / Error Banner */}
+          {error && (
+            <div className="auth-error-banner">
+              <AlertCircle size={17} />
+              <span>{error}</span>
+            </div>
+          )}
 
-        <div style={{ marginTop: '24px', textAlign: 'center', fontSize: '0.85rem', color: 'var(--text-muted)' }}>
-          Already registered?{' '}
-          <Link to="/login" style={{ color: 'var(--primary)', fontWeight: '600' }}>
-            Sign In
-          </Link>
+          <form onSubmit={handleSubmit}>
+            {/* Step 1: Full Name */}
+            <div className="gamified-field-group">
+              <div className="gamified-field-label-row">
+                <label className="gamified-field-label">Full Name</label>
+              </div>
+              <div className="gamified-input-wrap">
+                <input
+                  type="text"
+                  className="gamified-input"
+                  required
+                  value={fullName}
+                  onChange={(e) => setFullName(e.target.value)}
+                  onFocus={soundManager.playFocus}
+                  placeholder="Enter your full name"
+                />
+              </div>
+            </div>
+
+            {/* Step 2: Email Address */}
+            <div className="gamified-field-group">
+              <div className="gamified-field-label-row">
+                <label className="gamified-field-label">Email Address</label>
+              </div>
+              <div className="gamified-input-wrap">
+                <input
+                  type="email"
+                  className="gamified-input"
+                  required
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
+                  onFocus={soundManager.playFocus}
+                  placeholder="founder@venture.com"
+                />
+              </div>
+            </div>
+
+            {/* Step 3: Password with Security Shield Matrix */}
+            <div className="gamified-field-group">
+              <div className="gamified-field-label-row">
+                <label className="gamified-field-label">Password</label>
+              </div>
+              <div className="gamified-input-wrap">
+                <input
+                  type={showPassword ? 'text' : 'password'}
+                  className="gamified-input"
+                  required
+                  minLength={6}
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  onFocus={soundManager.playFocus}
+                  placeholder="Create a strong password (min. 6 chars)"
+                />
+                <div
+                  className="input-action-icon"
+                  onClick={() => setShowPassword(!showPassword)}
+                  title={showPassword ? 'Hide password' : 'Show password'}
+                >
+                  {showPassword ? <EyeOff size={16} /> : <Eye size={16} />}
+                </div>
+              </div>
+
+              {/* Cyber Security Matrix Indicator */}
+              <div className="security-matrix">
+                <div className="matrix-bars">
+                  <div className={`matrix-bar ${passwordScore >= 1 ? 'active-1' : ''}`} />
+                  <div className={`matrix-bar ${passwordScore >= 2 ? 'active-2' : ''}`} />
+                  <div className={`matrix-bar ${passwordScore >= 3 ? 'active-3' : ''}`} />
+                  <div className={`matrix-bar ${passwordScore >= 4 ? 'active-4' : ''}`} />
+                </div>
+                <div className="matrix-label">
+                  <span>VAULT INTEGRITY:</span>
+                  <span style={{ color: passwordScore >= 3 ? '#22d3ee' : passwordScore >= 2 ? '#f59e0b' : '#94a3b8' }}>
+                    {passwordLabels[passwordScore]}
+                  </span>
+                </div>
+              </div>
+            </div>
+
+            {/* Submit CTA Button */}
+            <button
+              type="submit"
+              className="btn-warp-create"
+              disabled={loading || launchingWarp}
+              onMouseEnter={soundManager.playHover}
+            >
+              {launchingWarp ? (
+                <>
+                  <Sparkles size={18} className="animate-spin" />
+                  <span>CALIBRATING FOUNDER PROTOCOL...</span>
+                </>
+              ) : loading ? (
+                <>
+                  <div className="spinner" style={{ width: 18, height: 18 }} />
+                  <span>TRANSMITTING DATA...</span>
+                </>
+              ) : (
+                <>
+                  <span>Create Account</span>
+                  <ArrowRight size={18} />
+                </>
+              )}
+            </button>
+          </form>
+
+          {/* Footer Back-to-Login */}
+          <div className="form-footer-login">
+            Already have an account?{' '}
+            <a
+              href="/login"
+              className="login-link"
+              onClick={handleSwitchToLogin}
+              onMouseEnter={soundManager.playHover}
+            >
+              Login
+            </a>
+          </div>
         </div>
       </div>
     </div>

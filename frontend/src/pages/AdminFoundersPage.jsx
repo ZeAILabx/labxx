@@ -1,28 +1,29 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useRef, useState, useEffect } from 'react';
 import { api } from '../services/api';
 import { Navbar } from '../components/common/Navbar';
-import { Users, Search, RefreshCw, Award, Compass } from 'lucide-react';
+import { Search, RefreshCw } from 'lucide-react';
 
 export const AdminFoundersPage = () => {
   const [founders, setFounders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const searchRef = useRef('');
 
-  useEffect(() => {
-    fetchFounders();
-  }, []);
-
-  const fetchFounders = async () => {
+  const fetchFounders = useCallback(async () => {
     setLoading(true);
     try {
-      const res = await api.getAdminFounders({ search: search });
+      const res = await api.getAdminFounders({ search: searchRef.current });
       setFounders(res.data || []);
     } catch (err) {
       console.error('Error fetching founders:', err);
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchFounders();
+  }, [fetchFounders]);
 
   const handleResetAssessment = async (userId, founderName) => {
     if (!window.confirm(`Reset assessment for ${founderName}? They will be required to take the diagnostic assessment again.`)) {
@@ -50,7 +51,10 @@ export const AdminFoundersPage = () => {
             className="form-input"
             placeholder="Search founders by name or email..."
             value={search}
-            onChange={(e) => setSearch(e.target.value)}
+            onChange={(e) => {
+              setSearch(e.target.value);
+              searchRef.current = e.target.value;
+            }}
             onKeyDown={(e) => e.key === 'Enter' && fetchFounders()}
           />
         </div>

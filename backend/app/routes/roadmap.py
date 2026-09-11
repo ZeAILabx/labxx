@@ -51,6 +51,14 @@ def get_roadmap():
     level_prog_map = {p['level_id']: p for p in (level_prog.data or [])}
     ms_prog_map = {p['milestone_id']: p for p in (ms_prog.data or [])}
 
+    # Derive the assessed unlock path as a fallback for accounts created
+    # before cumulative stage/level progress rows were introduced.
+    stage_order_by_id = {stage['id']: stage['stage_order'] for stage in (stages.data or [])}
+    level_by_id = {level['id']: level for level in (levels.data or [])}
+    current_stage_order = stage_order_by_id.get(fp_data.get('current_stage_id'), 0)
+    current_level = level_by_id.get(fp_data.get('current_level_id'), {})
+    current_level_order = current_level.get('level_order', 0)
+
     # Group milestones by level_id
     ms_by_level = {}
     for m in (milestones.data or []):
@@ -59,8 +67,19 @@ def get_roadmap():
             ms_by_level[lid] = []
         
         mp = ms_prog_map.get(m['id'], {})
+        milestone_level = level_by_id.get(m['level_id'], {})
+        milestone_stage_order = stage_order_by_id.get(milestone_level.get('stage_id'), 0)
+        level_on_starting_path = (
+            milestone_stage_order < current_stage_order or
+            (
+                milestone_stage_order == current_stage_order and
+                milestone_level.get('level_order', 0) <= current_level_order
+            )
+        )
         m_copy = dict(m)
-        m_copy['is_unlocked'] = mp.get('is_unlocked', False)
+        m_copy['is_unlocked'] = mp.get('is_unlocked', False) or (
+            level_on_starting_path and m.get('milestone_order') == 1
+        )
         m_copy['is_completed'] = mp.get('is_completed', False)
         m_copy['progress_percentage'] = mp.get('progress_percentage', 0)
         m_copy['completed_quests'] = mp.get('completed_quests', 0)
@@ -75,8 +94,13 @@ def get_roadmap():
             levels_by_stage[sid] = []
 
         lp = level_prog_map.get(l['id'], {})
+        level_stage_order = stage_order_by_id.get(l['stage_id'], 0)
+        level_on_starting_path = (
+            level_stage_order < current_stage_order or
+            (level_stage_order == current_stage_order and l['level_order'] <= current_level_order)
+        )
         l_copy = dict(l)
-        l_copy['is_unlocked'] = lp.get('is_unlocked', False)
+        l_copy['is_unlocked'] = lp.get('is_unlocked', False) or level_on_starting_path
         l_copy['is_completed'] = lp.get('is_completed', False)
         l_copy['milestones'] = ms_by_level.get(l['id'], [])
         levels_by_stage[sid].append(l_copy)
@@ -86,7 +110,7 @@ def get_roadmap():
     for s in (stages.data or []):
         sp = stage_prog_map.get(s['id'], {})
         s_copy = dict(s)
-        s_copy['is_unlocked'] = sp.get('is_unlocked', False)
+        s_copy['is_unlocked'] = sp.get('is_unlocked', False) or s['stage_order'] <= current_stage_order
         s_copy['is_completed'] = sp.get('is_completed', False)
         s_copy['levels'] = levels_by_stage.get(s['id'], [])
         stages_tree.append(s_copy)

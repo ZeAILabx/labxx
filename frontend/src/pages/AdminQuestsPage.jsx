@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useMemo } from 'react';
+import React, { useCallback, useState, useEffect, useMemo } from 'react';
 import { api } from '../services/api';
 import { Navbar } from '../components/common/Navbar';
-import { Plus, Trash2, ChevronDown } from 'lucide-react';
+import { Plus, Trash2 } from 'lucide-react';
+import { useEscapeKey } from '../hooks/useEscapeKey';
 
 export const AdminQuestsPage = () => {
   const [quests, setQuests] = useState([]);
@@ -29,12 +30,9 @@ export const AdminQuestsPage = () => {
   const [saving, setSaving] = useState(false);
   const [formError, setFormError] = useState('');
 
-  useEffect(() => {
-    fetchQuests();
-    fetchTree();
-  }, []);
+  useEscapeKey(showCreateModal, () => setShowCreateModal(false));
 
-  const fetchQuests = async () => {
+  const fetchQuests = useCallback(async () => {
     setLoading(true);
     try {
       const res = await api.getAdminQuests({});
@@ -44,16 +42,21 @@ export const AdminQuestsPage = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
 
-  const fetchTree = async () => {
+  const fetchTree = useCallback(async () => {
     try {
       const res = await api.getAdminRoadmapTree();
       setTreeData(res.data);
     } catch (err) {
       console.error('Error loading roadmap tree:', err);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchQuests();
+    fetchTree();
+  }, [fetchQuests, fetchTree]);
 
   // ── Derived options from cascading selection ────────────────────
   const stageOptions = useMemo(() => treeData?.stages || [], [treeData]);
@@ -211,9 +214,9 @@ export const AdminQuestsPage = () => {
 
       {/* ── CREATE QUEST MODAL ── */}
       {showCreateModal && (
-        <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', backgroundColor: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
+        <div role="dialog" aria-modal="true" aria-label="Create quest" style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', backgroundColor: 'rgba(0,0,0,0.8)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
           <div className="glass-card" style={{ width: '100%', maxWidth: '720px', maxHeight: '92vh', overflowY: 'auto', padding: '32px', position: 'relative' }}>
-            <button onClick={() => { setShowCreateModal(false); resetForm(); }} style={{ position: 'absolute', top: '20px', right: '20px', color: 'var(--text-muted)', fontSize: '1.2rem' }}>✕</button>
+            <button aria-label="Close quest form" onClick={() => { setShowCreateModal(false); resetForm(); }} style={{ position: 'absolute', top: '20px', right: '20px', color: 'var(--text-muted)', fontSize: '1.2rem' }}>✕</button>
 
             <h2 style={{ fontSize: '1.4rem', fontWeight: '800', color: '#fff', marginBottom: '6px' }}>
               Create New Roadmap Quest

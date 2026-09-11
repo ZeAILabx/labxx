@@ -1,7 +1,14 @@
 import React, { useState } from 'react';
 import { api } from '../../services/api';
-import { useAuth } from '../../contexts/AuthContext';
-import { CheckCircle2, ChevronRight, Rocket, Shield } from 'lucide-react';
+import { useAuth } from '../../contexts/useAuth';
+import {
+  Bot, Box, Boxes, BrainCircuit, Building2, CheckCircle2, ChevronRight,
+  CircleDollarSign, CircleSlash, Clapperboard, Code2, FileCheck2, FileText,
+  Flag, Gauge, Globe2, GraduationCap, HandHelping, HeartPulse, Landmark,
+  Leaf, Lightbulb, MessageCircle, Orbit, Rocket, Search, ShieldCheck,
+  Target, TrendingUp, Truck, UserCheck, UsersRound, Wheat, Wrench,
+} from 'lucide-react';
+import './AssessmentWizard.css';
 
 const DOMAIN_OPTIONS = [
   "Artificial Intelligence & Machine Learning",
@@ -83,6 +90,18 @@ const COMPLETED_OPTIONS = [
   "Actively scaling",
 ];
 
+const DOMAIN_ICONS = [Bot, HeartPulse, GraduationCap, UsersRound, ShieldCheck, Landmark, Truck, Leaf, Wheat, Building2, Clapperboard, Rocket];
+const STAGE_ICONS = [Target, Lightbulb, Search, UserCheck, Wrench, Rocket, UsersRound, CircleDollarSign, TrendingUp];
+const EVIDENCE_ICONS = {
+  problem_statement: FileText, user_interviews: MessageCircle, market_research: Search,
+  customer_validation: UserCheck, prototype: Box, working_mvp: Wrench, live_product: Globe2,
+  active_users: UsersRound, paying_customers: CircleDollarSign, revenue: TrendingUp, none_yet: CircleSlash,
+};
+const EXECUTION_ICONS = [HandHelping, Lightbulb, Wrench, Code2, BrainCircuit];
+const VALIDATION_ICONS = [CircleSlash, MessageCircle, UserCheck, UsersRound, CircleDollarSign, TrendingUp];
+const MATURITY_ICONS = [CircleSlash, Lightbulb, Box, Wrench, Boxes, ShieldCheck, Globe2];
+const COMPLETED_ICONS = [Target, Search, UserCheck, Box, Wrench, Rocket, UsersRound, CircleDollarSign, TrendingUp];
+
 export const AssessmentWizard = ({ onComplete }) => {
   const [step, setStep] = useState(1);
   const [answers, setAnswers] = useState({
@@ -148,7 +167,7 @@ export const AssessmentWizard = ({ onComplete }) => {
   };
 
   return (
-    <div style={{ maxWidth: '720px', margin: '40px auto' }}>
+    <div className="assessment-wizard">
       {/* Step Header */}
       <div style={{ marginBottom: '24px', textAlign: 'center' }}>
         <h1 style={{ fontSize: '1.8rem', fontWeight: '800', marginBottom: '8px' }}>
@@ -164,7 +183,7 @@ export const AssessmentWizard = ({ onComplete }) => {
         </div>
       </div>
 
-      <div className="glass-card" style={{ padding: '32px' }}>
+      <div className="glass-card assessment-card" key={step}>
         {error && (
           <div style={{ padding: '12px 16px', backgroundColor: 'rgba(239, 68, 68, 0.15)', color: 'var(--accent-red)', borderRadius: '8px', marginBottom: '20px', fontSize: '0.9rem' }}>
             {error}
@@ -174,6 +193,8 @@ export const AssessmentWizard = ({ onComplete }) => {
         {/* QUESTION 1 — DOMAIN */}
         {step === 1 && (
           <QuestionStep
+            icon={Orbit}
+            step={step}
             title="What problem domain are you working on?"
             subtitle="This directly determines your Domain and automatic Guild assignment."
           >
@@ -183,6 +204,8 @@ export const AssessmentWizard = ({ onComplete }) => {
                 selected={answers.q1 === idx + 1}
                 onClick={() => handleSingleSelect('q1', idx + 1)}
                 label={opt}
+                icon={DOMAIN_ICONS[idx]}
+                index={idx}
               />
             ))}
           </QuestionStep>
@@ -191,6 +214,8 @@ export const AssessmentWizard = ({ onComplete }) => {
         {/* QUESTION 2 — PROJECT STAGE */}
         {step === 2 && (
           <QuestionStep
+            icon={Flag}
+            step={step}
             title="What best describes the current state of your project?"
             subtitle="Select the primary state of development."
           >
@@ -200,6 +225,8 @@ export const AssessmentWizard = ({ onComplete }) => {
                 selected={answers.q2 === idx + 1}
                 onClick={() => handleSingleSelect('q2', idx + 1)}
                 label={opt}
+                icon={STAGE_ICONS[idx]}
+                index={idx}
               />
             ))}
           </QuestionStep>
@@ -208,16 +235,19 @@ export const AssessmentWizard = ({ onComplete }) => {
         {/* QUESTION 3 — EVIDENCE */}
         {step === 3 && (
           <QuestionStep
+            icon={FileCheck2}
+            step={step}
             title="What evidence do you currently have?"
             subtitle="Select all evidence items that apply to your venture."
           >
-            {EVIDENCE_OPTIONS.map((opt) => (
+            {EVIDENCE_OPTIONS.map((opt, idx) => (
               <OptionCard
                 key={opt.key}
                 selected={answers.q3.includes(opt.key)}
                 onClick={() => handleMultiSelect(opt.key)}
                 label={opt.label}
-                multi
+                icon={EVIDENCE_ICONS[opt.key]}
+                index={idx}
               />
             ))}
           </QuestionStep>
@@ -226,6 +256,8 @@ export const AssessmentWizard = ({ onComplete }) => {
         {/* QUESTION 4 — EXECUTION */}
         {step === 4 && (
           <QuestionStep
+            icon={Gauge}
+            step={step}
             title="How independently can you execute your project work?"
             subtitle="Assesses execution confidence and skill maturity."
           >
@@ -235,6 +267,8 @@ export const AssessmentWizard = ({ onComplete }) => {
                 selected={answers.q4 === idx + 1}
                 onClick={() => handleSingleSelect('q4', idx + 1)}
                 label={`${idx + 1}. ${opt}`}
+                icon={EXECUTION_ICONS[idx]}
+                index={idx}
               />
             ))}
           </QuestionStep>
@@ -243,6 +277,8 @@ export const AssessmentWizard = ({ onComplete }) => {
         {/* QUESTION 5 — VALIDATION / TRACTION */}
         {step === 5 && (
           <QuestionStep
+            icon={UsersRound}
+            step={step}
             title="How much real-world validation or traction do you have?"
             subtitle="Assesses customer signal and market response."
           >
@@ -252,6 +288,8 @@ export const AssessmentWizard = ({ onComplete }) => {
                 selected={answers.q5 === idx + 1}
                 onClick={() => handleSingleSelect('q5', idx + 1)}
                 label={opt}
+                icon={VALIDATION_ICONS[idx]}
+                index={idx}
               />
             ))}
           </QuestionStep>
@@ -260,6 +298,8 @@ export const AssessmentWizard = ({ onComplete }) => {
         {/* QUESTION 6 — PRODUCT MATURITY */}
         {step === 6 && (
           <QuestionStep
+            icon={Boxes}
+            step={step}
             title="How complete and reliable is your current product?"
             subtitle="Assesses technical and product readiness."
           >
@@ -269,6 +309,8 @@ export const AssessmentWizard = ({ onComplete }) => {
                 selected={answers.q6 === idx + 1}
                 onClick={() => handleSingleSelect('q6', idx + 1)}
                 label={opt}
+                icon={MATURITY_ICONS[idx]}
+                index={idx}
               />
             ))}
           </QuestionStep>
@@ -277,6 +319,8 @@ export const AssessmentWizard = ({ onComplete }) => {
         {/* QUESTION 7 — COMPLETED WORK */}
         {step === 7 && (
           <QuestionStep
+            icon={Flag}
+            step={step}
             title="What have you actually completed to date?"
             subtitle="Final verification of tangible outputs achieved."
           >
@@ -286,6 +330,8 @@ export const AssessmentWizard = ({ onComplete }) => {
                 selected={answers.q7 === idx + 1}
                 onClick={() => handleSingleSelect('q7', idx + 1)}
                 label={opt}
+                icon={COMPLETED_ICONS[idx]}
+                index={idx}
               />
             ))}
           </QuestionStep>
@@ -317,37 +363,34 @@ export const AssessmentWizard = ({ onComplete }) => {
   );
 };
 
-const QuestionStep = ({ title, subtitle, children }) => (
-  <div>
-    <h2 style={{ fontSize: '1.25rem', fontWeight: '700', marginBottom: '6px', color: '#fff' }}>
-      {title}
-    </h2>
-    <p style={{ fontSize: '0.9rem', color: 'var(--text-muted)', marginBottom: '24px' }}>
-      {subtitle}
-    </p>
-    <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
+const QuestionStep = ({ title, subtitle, children, icon: QuestionIcon, step }) => (
+  <div className="assessment-question">
+    <div className="assessment-question__heading">
+      <div className="assessment-question__icon"><QuestionIcon size={30} /><span /></div>
+      <div>
+        <span className="assessment-question__kicker">QUESTION 0{step}</span>
+        <h2>{title}</h2>
+        <p>{subtitle}</p>
+      </div>
+    </div>
+    <div className="assessment-options">
       {children}
     </div>
   </div>
 );
 
-const OptionCard = ({ selected, onClick, label, multi }) => (
-  <div
+const OptionCard = ({ selected, onClick, label, icon: Icon, index }) => (
+  <button
+    type="button"
+    className={`assessment-option ${selected ? 'is-selected' : ''}`}
     onClick={onClick}
     style={{
-      padding: '14px 18px',
-      borderRadius: 'var(--radius-md)',
-      backgroundColor: selected ? 'var(--primary-light)' : 'rgba(255,255,255,0.03)',
-      border: selected ? '1.5px solid var(--primary)' : '1px solid var(--border-color)',
-      color: selected ? '#fff' : 'var(--text-main)',
-      display: 'flex',
-      alignItems: 'center',
-      justifyContent: 'space-between',
-      cursor: 'pointer',
-      transition: 'all 0.2s ease',
+      '--option-index': index,
+      '--option-hue': (index * 31 + 185) % 360,
     }}
   >
-    <span style={{ fontWeight: selected ? '600' : '400', fontSize: '0.95rem' }}>{label}</span>
-    {selected && <CheckCircle2 size={20} color="var(--primary)" />}
-  </div>
+    <span className="assessment-option__icon"><Icon size={21} /></span>
+    <span className="assessment-option__label">{label}</span>
+    <span className="assessment-option__check">{selected && <CheckCircle2 size={21} />}</span>
+  </button>
 );

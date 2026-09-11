@@ -75,7 +75,7 @@ def submit_assessment():
         domain_id = domain_rec.data[0]['id']
 
         # Lookup stage record
-        stage_rec = supabase.table('stages').select('id, name').eq('name', result['stage']).execute()
+        stage_rec = supabase.table('stages').select('id, name, stage_order').eq('name', result['stage']).execute()
         if not stage_rec.data:
             return jsonify({'success': False, 'message': f"Stage '{result['stage']}' not found in database"}), 500
         stage_id = stage_rec.data[0]['id']
@@ -138,25 +138,56 @@ def submit_assessment():
             'roadmap_completed': False
         }, on_conflict='user_id').execute()
 
-        # 5. Initialize Stage & Level & Milestone progress as unlocked
-        supabase.table('stage_progress').upsert({
-            'user_id': user_id,
-            'stage_id': stage_id,
-            'is_unlocked': True
-        }, on_conflict='user_id,stage_id').execute()
+        # 5. Unlock the complete path up to the assessed starting position.
+        # A founder starting at Stage 3 / Level 2 can access Stages 1-3,
+        # every level in earlier stages, and Levels 1-2 in the current stage.
+        starting_stage_order = stage_rec.data[0]['stage_order']
+        prior_stages = supabase.table('stages').select('id, stage_order').lte(
+            'stage_order', starting_stage_order
+        ).execute()
+        stage_rows = [
+            {'user_id': user_id, 'stage_id': stage['id'], 'is_unlocked': True}
+            for stage in (prior_stages.data or [])
+        ]
+        if stage_rows:
+            supabase.table('stage_progress').upsert(
+                stage_rows, on_conflict='user_id,stage_id'
+            ).execute()
 
-        supabase.table('level_progress').upsert({
-            'user_id': user_id,
-            'level_id': level_id,
-            'is_unlocked': True
-        }, on_conflict='user_id,level_id').execute()
+        unlocked_level_ids = []
+        for stage in (prior_stages.data or []):
+            level_query = supabase.table('levels').select('id, level_order').eq(
+                'stage_id', stage['id']
+            )
+            if stage['stage_order'] == starting_stage_order:
+                level_query = level_query.lte('level_order', result['level'])
+            stage_levels = level_query.execute()
+            unlocked_level_ids.extend(level['id'] for level in (stage_levels.data or []))
 
-        if milestone_id:
-            supabase.table('milestone_progress').upsert({
-                'user_id': user_id,
-                'milestone_id': milestone_id,
-                'is_unlocked': True
-            }, on_conflict='user_id,milestone_id').execute()
+        level_rows = [
+            {'user_id': user_id, 'level_id': unlocked_level_id, 'is_unlocked': True}
+            for unlocked_level_id in unlocked_level_ids
+        ]
+        if level_rows:
+            supabase.table('level_progress').upsert(
+                level_rows, on_conflict='user_id,level_id'
+            ).execute()
+
+        # Make the first milestone of every unlocked level accessible while
+        # keeping the founder's assessed milestone as their current location.
+        unlocked_milestones = []
+        if unlocked_level_ids:
+            unlocked_milestones = supabase.table('milestones').select('id').eq(
+                'domain_id', domain_id
+            ).in_('level_id', unlocked_level_ids).eq('milestone_order', 1).execute().data or []
+        milestone_rows = [
+            {'user_id': user_id, 'milestone_id': item['id'], 'is_unlocked': True}
+            for item in unlocked_milestones
+        ]
+        if milestone_rows:
+            supabase.table('milestone_progress').upsert(
+                milestone_rows, on_conflict='user_id,milestone_id'
+            ).execute()
 
         # Send welcome notification
         supabase.table('notifications').insert({

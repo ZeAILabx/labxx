@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useState, useEffect } from 'react';
 import { api } from '../services/api';
 import { Navbar } from '../components/common/Navbar';
 import { Bell, Check, CheckCheck } from 'lucide-react';
@@ -8,11 +8,7 @@ export const NotificationsPage = () => {
   const [unreadCount, setUnreadCount] = useState(0);
   const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    fetchNotifications();
-  }, []);
-
-  const fetchNotifications = async () => {
+  const fetchNotifications = useCallback(async () => {
     setLoading(true);
     try {
       const res = await api.getNotifications();
@@ -23,7 +19,11 @@ export const NotificationsPage = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchNotifications();
+  }, [fetchNotifications]);
 
   const handleMarkRead = async (id) => {
     try {
@@ -44,7 +44,8 @@ export const NotificationsPage = () => {
   };
 
   return (
-    <div>
+    <div className="founder-world founder-world--notifications">
+      <div className="founder-world__backdrop" aria-hidden="true" />
       <Navbar title="Notifications" />
 
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '24px' }}>

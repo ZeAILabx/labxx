@@ -1,7 +1,8 @@
-import React, { useState, useEffect } from 'react';
+import React, { useCallback, useState, useEffect } from 'react';
 import { api } from '../services/api';
 import { Navbar } from '../components/common/Navbar';
-import { Plus, Trash2, Megaphone, Calendar } from 'lucide-react';
+import { Plus, Trash2 } from 'lucide-react';
+import { useEscapeKey } from '../hooks/useEscapeKey';
 
 export const AdminEventsPage = () => {
   const [announcements, setAnnouncements] = useState([]);
@@ -18,11 +19,9 @@ export const AdminEventsPage = () => {
   const [externalUrl, setExternalUrl] = useState('');
   const [saving, setSaving] = useState(false);
 
-  useEffect(() => {
-    fetchAnnouncements();
-  }, []);
+  useEscapeKey(showCreateModal, () => setShowCreateModal(false));
 
-  const fetchAnnouncements = async () => {
+  const fetchAnnouncements = useCallback(async () => {
     setLoading(true);
     try {
       const res = await api.getAdminAnnouncements();
@@ -32,7 +31,11 @@ export const AdminEventsPage = () => {
     } finally {
       setLoading(false);
     }
-  };
+  }, []);
+
+  useEffect(() => {
+    fetchAnnouncements();
+  }, [fetchAnnouncements]);
 
   const handleCreate = async (e) => {
     e.preventDefault();
@@ -136,9 +139,9 @@ export const AdminEventsPage = () => {
 
       {/* CREATE MODAL */}
       {showCreateModal && (
-        <div style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', backgroundColor: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
+        <div role="dialog" aria-modal="true" aria-label="Create event or announcement" style={{ position: 'fixed', top: 0, left: 0, width: '100vw', height: '100vh', backgroundColor: 'rgba(0,0,0,0.75)', backdropFilter: 'blur(8px)', display: 'flex', alignItems: 'center', justifyContent: 'center', zIndex: 1000, padding: '20px' }}>
           <div className="glass-card" style={{ width: '100%', maxWidth: '540px', padding: '32px', position: 'relative' }}>
-            <button onClick={() => setShowCreateModal(false)} style={{ position: 'absolute', top: '20px', right: '20px', color: 'var(--text-muted)' }}>✕</button>
+            <button aria-label="Close event form" onClick={() => setShowCreateModal(false)} style={{ position: 'absolute', top: '20px', right: '20px', color: 'var(--text-muted)' }}>✕</button>
             <h2 style={{ fontSize: '1.4rem', fontWeight: '800', color: '#fff', marginBottom: '20px' }}>
               Publish Event / Announcement
             </h2>

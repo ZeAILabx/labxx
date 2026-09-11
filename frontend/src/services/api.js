@@ -10,6 +10,12 @@ class ApiError extends Error {
 
 async function request(endpoint, options = {}) {
   const token = localStorage.getItem('labx_token');
+  const controller = new AbortController();
+  const timeoutId = window.setTimeout(() => controller.abort(), 30000);
+  if (options.signal) {
+    if (options.signal.aborted) controller.abort();
+    else options.signal.addEventListener('abort', () => controller.abort(), { once: true });
+  }
 
   const headers = {
     'Content-Type': 'application/json',
@@ -20,14 +26,26 @@ async function request(endpoint, options = {}) {
   const config = {
     ...options,
     headers,
+    signal: controller.signal,
   };
 
   if (options.body && typeof options.body === 'object') {
     config.body = JSON.stringify(options.body);
   }
 
-  const response = await fetch(`${API_BASE_URL}${endpoint}`, config);
-  const data = await response.json().catch(() => ({}));
+  let response;
+  try {
+    response = await fetch(`${API_BASE_URL}${endpoint}`, config);
+  } catch (error) {
+    if (error.name === 'AbortError') {
+      throw new ApiError('The request timed out. Please try again.', 408, {});
+    }
+    throw new ApiError('Unable to reach the server. Check your connection and try again.', 0, {});
+  } finally {
+    window.clearTimeout(timeoutId);
+  }
+
+  const data = response.status === 204 ? {} : await response.json().catch(() => ({}));
 
   if (!response.ok || data.success === false) {
     throw new ApiError(
