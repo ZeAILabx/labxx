@@ -366,7 +366,7 @@ export const ProfilePage = () => {
 
           <div className="glass-card" style={{ padding: '14px', textAlign: 'center', background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.3)' }}>
             <div style={{ fontSize: '1.5rem', fontWeight: '900', color: '#f59e0b' }}>{(profile?.total_points || user?.total_points || 0).toLocaleString()}</div>
-            <div style={{ fontSize: '0.74rem', color: '#f59e0b', fontWeight: '850', marginTop: '4px', textTransform: 'uppercase' }}>LabX Points</div>
+            <div style={{ fontSize: '0.74rem', color: '#f59e0b', fontWeight: '850', marginTop: '4px', textTransform: 'uppercase' }}>LabX Coins</div>
           </div>
         </div>
       </div>

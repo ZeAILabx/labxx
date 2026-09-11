@@ -202,7 +202,6 @@
 
 .labx-sidebar-nav {
   position: relative;
-  counter-reset: labx-module;
   flex: 1;
 
   min-width: 0;
@@ -318,7 +317,6 @@
 
   overflow: hidden;
   animation: labx-nav-enter 0.45s both;
-  counter-increment: labx-module;
 }
 
 @media (max-height: 760px) {
@@ -444,20 +442,6 @@
   gap: 8px;
   letter-spacing: 0.025em;
   transition: letter-spacing 0.25s ease, color 0.25s ease, text-shadow 0.25s ease;
-}
-
-.labx-nav-label::before {
-  content: counter(labx-module, decimal-leading-zero);
-  color: #475569;
-  font-size: 0.48rem;
-  font-weight: 900;
-  letter-spacing: 0.06em;
-  transition: color 0.2s ease;
-}
-
-.labx-nav-item:hover .labx-nav-label::before,
-.labx-nav-item.active .labx-nav-label::before {
-  color: #67e8f9;
 }
 
 .labx-nav-label::after {
