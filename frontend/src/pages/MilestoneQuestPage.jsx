@@ -162,7 +162,7 @@ export const MilestoneQuestPage = () => {
             No core quests configured for this milestone yet.
           </div>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '20px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(320px, 100%), 1fr))', gap: '20px' }}>
             {core_quests?.map((quest) => (
               <QuestCard key={quest.id} quest={quest} onClick={() => handleOpenQuestModal(quest)} />
             ))}
@@ -186,7 +186,7 @@ export const MilestoneQuestPage = () => {
             No side quests currently assigned to this sector.
           </div>
         ) : (
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(320px, 1fr))', gap: '20px' }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(min(320px, 100%), 1fr))', gap: '20px' }}>
             {side_quests?.map((quest) => (
               <QuestCard key={quest.id} quest={quest} onClick={() => handleOpenQuestModal(quest)} />
             ))}

@@ -150,6 +150,10 @@ export const Sidebar = () => {
           </>
         )}
 
+        <button type="button" className="labx-nav-item labx-mobile-logout" onClick={handleLogout}>
+          <span className="labx-nav-icon"><LogOut size={18} /></span>
+          <span className="labx-nav-label">Logout</span>
+        </button>
       </nav>
 
       {/* User Profile Footer */}
