@@ -55,43 +55,35 @@ graph TD
   - Card Glass: `linear-gradient(180deg, rgba(255,255,255,0.04) 0%, rgba(255,255,255,0.01) 100%)`
 
 ### 2.3 Frontend Directory Structure
-```
+
+```text
 frontend/
-├── public/
-├── src/
-│   ├── assets/
-│   ├── components/
-│   │   ├── common/
-│   │   │   ├── Navbar.jsx          # Top persistent bar with points, notifications & profile
-│   │   │   ├── Sidebar.jsx         # Responsive navigation sidebar with Leaderboard link
-│   │   │   └── ProtectedRoute.jsx  # Auth & Role router guards
-│   │   ├── admin/                  # Admin-specific modals & verification queues
-│   │   ├── assessment/             # Diagnostic Assessment wizard & results
-│   │   └── founder/                # Milestone cards, quest submission modals
-│   ├── contexts/
-│   │   ├── AuthContext.jsx         # Global user session & profile state
-│   │   └── RealtimeContext.jsx     # Supabase Realtime channel subscriptions
-│   ├── pages/
-│   │   ├── LoginPage.jsx           # User sign-in with auto-confirmation handling
-│   │   ├── RegisterPage.jsx        # Founder account onboarding
-│   │   ├── ForgotPasswordPage.jsx  # Password recovery workflow
-│   │   ├── AssessmentPage.jsx      # 7-step diagnostic evaluation wizard
-│   │   ├── DashboardPage.jsx       # Founder overview, next quest CTA, milestones
-│   │   ├── RoadmapPage.jsx         # Interactive roadmap tree across stages & levels
-│   │   ├── LeaderboardPage.jsx     # Top 3 podium, domain & global rankings table
-│   │   ├── GuildPage.jsx           # Domain-based real-time chatroom
-│   │   ├── SocialPage.jsx          # Founder activity stream, posts, likes & comments
-│   │   ├── AchievementsPage.jsx    # Complete badge gallery with locked/earned status
-│   │   ├── ProfilePage.jsx         # Founder bio, system progression & earned badges showcase
-│   │   ├── EventsPage.jsx          # Platform announcements & startup events
-│   │   ├── NotificationsPage.jsx   # In-app notifications & read state manager
-│   │   └── AdminDashboardPage.jsx  # Admin analytics, verification queue, quest builder
-│   ├── services/
-│   │   ├── api.js                  # Centralized Axios/fetch client with JWT interceptor
-│   │   └── supabase.js             # Supabase JS client for WebSocket subscriptions
-│   ├── App.jsx                     # Route definitions & layout wrappers
-│   ├── index.css                   # Core design tokens, utility classes & animations
-│   └── main.jsx                    # React entry point
+  public/
+  src/
+    app/App.jsx                   # Route definitions and application layout
+    assets/images/
+    components/
+      layout/                     # Navbar, sidebar, mobile navigation
+      common/                     # Shared UI components
+    features/
+      authentication/             # Auth components and session hooks
+      assessment/components/      # Diagnostic wizard and results
+      chatbot/components/
+      admin/pages/
+      dashboard/pages/
+      roadmap/pages/
+      leaderboard/pages/
+      guilds/pages/
+      social/pages/
+      achievements/pages/
+      profile/pages/
+      events/pages/
+      notifications/pages/
+    hooks/                        # Shared hooks
+    services/api/client.js        # Existing API client
+    styles/                       # Global and shared page styles
+    main.jsx                      # React entry point
+  tests/
 ```
 
 ### 2.4 Complete Pages Breakdown
@@ -118,7 +110,7 @@ frontend/
 ## 3. Backend Architecture & Service Engines
 
 ### 3.1 Flask Application Architecture
-The backend is structured using Flask's application factory pattern (`create_app` in `backend/app/__init__.py`), registering 15 modular Blueprints:
+The backend is structured using Flask's application factory pattern (`create_app` in `backend/main.py`), registering 15 modular Blueprints:
 - **`auth_bp`** (`/api/auth`): Authentication, token refresh, and registration.
 - **`assessment_bp`** (`/api/assessment`): Diagnostic submission and scoring.
 - **`roadmap_bp`** (`/api/roadmap`): Domain roadmap hierarchy with unlock states.

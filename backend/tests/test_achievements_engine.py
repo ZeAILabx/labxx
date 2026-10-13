@@ -1,5 +1,5 @@
 import pytest
-from app.services.achievements_engine import (
+from src.service.achievements_engine import (
     award_achievement,
     check_and_award_quest_achievements,
     check_and_award_points_achievements,

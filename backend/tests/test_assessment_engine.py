@@ -1,5 +1,5 @@
 import pytest
-from app.services.assessment_engine import (
+from src.service.assessment_engine import (
     determine_domain,
     determine_stage,
     calculate_level_score,
